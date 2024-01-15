@@ -1,0 +1,83 @@
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+import 'package:gaan/screens/services/auth.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
+
+class Home extends StatefulWidget {
+
+  _HomeState createState() => _HomeState();
+}
+
+class _HomeState extends State<Home> {
+    String level = '';
+
+    List<PlatformFile>? _files;
+
+    void _openFileExplorer() async {
+      _files = (await FilePicker.platform.pickFiles(
+          type: FileType.any,
+          allowMultiple: false,
+          allowedExtensions: null
+      ))!.files;
+
+      print('Loaded file path is : ${_files!.first.path}');
+    }
+
+    void _addMusic() async {
+      var uri = Uri.parse('http://192.168.31.151/api/upload.php');
+      var request = http.MultipartRequest('POST', uri);
+      request.files.add(await http.MultipartFile.fromPath('file', _files!.first.path.toString()));
+      var response = await request.send();
+      if(response.statusCode == 200) {
+        print('Loaded ...');
+
+        final response = await http.get(Uri.parse('http://192.168.31.151:5000/genra')); //getting the response from our backend server script
+
+        final decoded = json.decode(response.body) as Map<String, dynamic>; //converting it from json to key value pair
+
+        setState(() {
+          level = decoded['level']; //changing the state of our widget on data update
+        });
+
+        print(level);
+
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Text(level, //Text that will be displayed on the screen
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              ],
+            );
+
+
+      } else {
+        print('Something went wrong!');
+      }
+    }
+
+    @override
+    Widget build(BuildContext context) {
+      return Scaffold(
+        appBar: AppBar(
+          centerTitle: true,
+          title: Text('Gaan'),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(onPressed: _openFileExplorer, child: Text('Open Explorer')),
+              ElevatedButton(onPressed: _addMusic, child: Text('Add Music'))
+          ],
+        ),
+      ),
+    );
+  }
+
+}
+
+
